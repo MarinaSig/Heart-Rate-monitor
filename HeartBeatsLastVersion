@@ -1,0 +1,103 @@
+import time
+import Adafruit_ADS1x15
+import urllib.request                           #This will help open an URL
+import requests                                 #this sends request and allow access to the response data
+import threading                                # run few tasks at the same time
+import random
+
+def thingspeak_post():
+    myAPI = '0E7D4RHI3JQK6CFI'  
+    baseURL = 'https://api.thingspeak.com/update?api_key=%s' % myAPI  #This is the URL where we will send data
+    threading.Timer(30.0,thingspeak_post).start()                     #start a time thread after 30 seconds
+    val=random.randint(40,130)                                        #range(start,end)
+    URl='https://api.thingspeak.com/update?api_key=0E7D4RHI3JQK6CFI&field1'
+    KEY=' 0E7D4RHI3JQK6CFI'
+    HEADER='&field1={}&field2={}'.format(val,val)
+  
+  
+if __name__ == '__main__':                      #check if module is imported
+    thingspeak_post()
+    
+
+    adc = Adafruit_ADS1x15.ADS1015()
+                                                # initialization    
+    GAIN = 2/3
+    curState = 0                                # current state to start
+    thresh = 525                                # mid point
+    P = 512
+    T = 512
+    stateChanged = 0
+    sampleBeat = 0
+    lastBeatTime = 0
+    firstBeat = True
+    secondBeat = False
+    Pulse = False
+    IBI = 600
+    rate = [0]*10
+    amp = 100
+
+    lastTime = int(time.time()*1000)
+
+    
+    while True:
+        
+        Signal = adc.read_adc(0, gain=GAIN)      # This reads from the ADC - channel A0 
+        curTime = int(time.time()*1000)
+
+        sampleBeat += curTime - lastTime;     # This keeps track of  time in mS using variable
+        lastTime = curTime
+        N = sampleBeat - lastBeatTime;        # This monitor the time from last beat
+                                                 # This finds the highest and lowest point of the pulse 
+        if Signal < thresh and N > (IBI/5.0)*3.0:# avoid dichrotic noise by waiting 3/5 of last IBI
+            if Signal < T :                      # T is the lowest point / This keeps track of lowest point in pulse
+              T = Signal;                         
+
+        if Signal > thresh and  Signal > P:      # Lowest point condition helps avoid noise
+            P = Signal;                          # P is the highest point / This keeps track of highest point in pulse
+
+          # This looks for HEART BEAT
+        if N > 250 :                                   
+            if  (Signal > thresh) and  (Pulse == False) and  (N > (IBI/5.0)*3.0)  :
+              Pulse = True;                               # Here there is pulse 
+              IBI = sampleBeat - lastBeatTime;         # This measures time between beats in mS
+              lastBeatTime = sampleBeat;               # This record next pulse
+              if secondBeat :                             # If second beat is true
+                secondBeat = False;                       # clear secondBeat flag
+                for i in range(0,10):                     # Running total to get a BPM at startup
+                  rate[i] = IBI;
+
+              if firstBeat :                             # First time to find the beat
+                firstBeat = False;                       # clear firstBeat flag
+                secondBeat = True;                       # set the second beat flag
+                continue                             
+
+                                                        # keep running total of last 10 IBI values
+              runningTotal = 0;                         # clear runningTotal variable
+
+              for i in range(0,9):                      # shift data in rate array
+                rate[i] = rate[i+1];                    # Drop the oldest IBI value
+                runningTotal += rate[i];                # Add up the oldest 9 IBI values
+
+              rate[9] = IBI;                          
+              runningTotal += rate[9];                  # add the latest IBI to rate array 
+              runningTotal /= 10;                       # add the latest IBI to runningTotal 
+              BPM = 60000/runningTotal;                 # average the last 10 IBI values 
+              print ("BPM: %d" % BPM )                  # That's BPM
+
+        if Signal < thresh and Pulse == True :          # when values are down, beat is over
+            Pulse = False;                              # reset the Pulse 
+            amp = P - T;                                # get amplitude of pulse 
+            thresh = amp/2 + T;                         # set lowest point at 50% of the amplitude
+            P = thresh;                                 # reset these for next pulse
+            T = thresh;
+
+        if N > 2500 :                                   # if 2.5 seconds go by without a beat
+            thresh = 512;                               # set lowest point default
+            P = 512;                                    # set P default
+            T = 512;                                    # set T default
+            lastBeatTime = sampleBeat;               # lastBeatTime up to date
+            firstBeat = True;                           # set these to avoid noise
+            secondBeat = False;                    
+            print ("No Heartbeat Found")
+
+        time.sleep(0.005)
