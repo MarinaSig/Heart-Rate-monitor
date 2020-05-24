@@ -1,0 +1,20 @@
+<html>
+<head>
+<title>Data Collection Dashboard</title>
+</head>
+<body>
+<table border=2 bordercolor="#0000FF">
+<tr><td colspan="2">
+<h1 align="center" color="#00FFFF">Heart Rate Data Dashboard</h1>
+</td></tr>
+<tr><td>
+<iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/978885/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&yaxismax=150"></iframe>
+</td>
+<td><iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/978885/widgets/158143"></iframe>
+</td></tr>
+<tr><td>
+<iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/apps/matlab_visualizations/344567"></iframe
+</td>
+<td>
+<iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/978885/maps/channel_show"></iframe></td>
+</html>
